@@ -160,6 +160,36 @@ export default function EligibilityWizard() {
     );
   }
 
+  function goBack() {
+    if (step === "occupancy") {
+      setStep("address");
+      return;
+    }
+    if (step === "built") {
+      setStep("occupancy");
+      return;
+    }
+    if (step === "csc") {
+      setStep("built");
+      return;
+    }
+    if (step === "checking") {
+      setStep("csc");
+      return;
+    }
+    if (step === "results") {
+      if (occupancy === "rental") {
+        setStep("occupancy");
+      } else if (builtBefore2008 === false) {
+        setStep("built");
+      } else {
+        setStep("csc");
+      }
+    }
+  }
+
+  const canGoBack = step !== "address";
+
   const claimFormReady =
     !result?.eeca.hasExistingClaim ||
     (Boolean(contactMessage.trim()) &&
@@ -184,6 +214,12 @@ export default function EligibilityWizard() {
           <span key={n} className={n <= stepIndex ? "dot active" : "dot"} />
         ))}
       </div>
+
+      {canGoBack && (
+        <button type="button" className="nav-back" onClick={goBack}>
+          ← Back
+        </button>
+      )}
 
       {step === "address" && (
         <section className="panel">
@@ -264,9 +300,6 @@ export default function EligibilityWizard() {
             </div>
           )}
           <div className="actions">
-            <button type="button" className="btn ghost" onClick={() => setStep("address")}>
-              Back
-            </button>
             <button
               type="button"
               className="btn primary"
@@ -305,9 +338,6 @@ export default function EligibilityWizard() {
             </div>
           )}
           <div className="actions">
-            <button type="button" className="btn ghost" onClick={() => setStep("occupancy")}>
-              Back
-            </button>
             <button
               type="button"
               className="btn primary"
@@ -345,9 +375,6 @@ export default function EligibilityWizard() {
           </div>
           {error && <div className="alert error">{error}</div>}
           <div className="actions">
-            <button type="button" className="btn ghost" onClick={() => setStep("built")}>
-              Back
-            </button>
             <button
               type="button"
               className="btn primary"
@@ -368,6 +395,9 @@ export default function EligibilityWizard() {
             Looking up NZDep2023 funding zone and checking EECA for any existing claim. This can take
             a few seconds.
           </p>
+          <button type="button" className="btn ghost" onClick={goBack}>
+            Cancel &amp; go back
+          </button>
         </section>
       )}
 
@@ -526,6 +556,9 @@ export default function EligibilityWizard() {
               />
             </label>
             <div className="actions">
+              <button type="button" className="btn ghost" onClick={goBack}>
+                ← Edit answers
+              </button>
               <button type="button" className="btn ghost" onClick={restart}>
                 Start over
               </button>
