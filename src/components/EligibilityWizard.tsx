@@ -34,7 +34,7 @@ export default function EligibilityWizard() {
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [yearsSinceClaim, setYearsSinceClaim] = useState("");
-  const [claimScenario, setClaimScenario] = useState<ClaimScenario>("");
+  const [claimScenarios, setClaimScenarios] = useState<ClaimScenario[]>([]);
   const [submitStatus, setSubmitStatus] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [searching, setSearching] = useState(false);
@@ -122,7 +122,7 @@ export default function EligibilityWizard() {
           contactEmail,
           contactPhone,
           yearsSinceClaim,
-          claimScenario,
+          claimScenarios,
         }),
       });
       const data = await res.json();
@@ -150,15 +150,21 @@ export default function EligibilityWizard() {
     setContactEmail("");
     setContactPhone("");
     setYearsSinceClaim("");
-    setClaimScenario("");
+    setClaimScenarios([]);
     setSubmitStatus(null);
+  }
+
+  function toggleScenario(value: ClaimScenario) {
+    setClaimScenarios((prev) =>
+      prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]
+    );
   }
 
   const claimFormReady =
     !result?.eeca.hasExistingClaim ||
     (Boolean(contactMessage.trim()) &&
       Boolean(yearsSinceClaim.trim()) &&
-      Boolean(claimScenario));
+      claimScenarios.length > 0);
 
   const stepIndex =
     step === "address"
@@ -483,14 +489,17 @@ export default function EligibilityWizard() {
                   />
                 </label>
                 <fieldset className="scenario-set">
-                  <legend>What best describes your situation?</legend>
+                  <legend>Your situation (select all that apply)</legend>
                   <div className="choices">
                     {CLAIM_SCENARIOS.map((s) => (
                       <button
                         key={s.value}
                         type="button"
-                        className={claimScenario === s.value ? "choice selected" : "choice"}
-                        onClick={() => setClaimScenario(s.value)}
+                        className={
+                          claimScenarios.includes(s.value) ? "choice selected" : "choice"
+                        }
+                        aria-pressed={claimScenarios.includes(s.value)}
+                        onClick={() => toggleScenario(s.value)}
                       >
                         {s.label}
                       </button>
