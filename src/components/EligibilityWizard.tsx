@@ -32,10 +32,12 @@ export default function EligibilityWizard() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (query.trim().length < 3 || address?.label === query) {
-      setSuggestions([]);
+
+    const trimmed = query.trim();
+    if (trimmed.length < 3 || address?.label === query) {
       return;
     }
+
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       try {
@@ -48,6 +50,7 @@ export default function EligibilityWizard() {
         setSearching(false);
       }
     }, 280);
+
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
@@ -57,6 +60,12 @@ export default function EligibilityWizard() {
     setAddress(item);
     setQuery(item.label);
     setSuggestions([]);
+  }
+
+  function onAddressInput(value: string) {
+    setAddress(null);
+    setQuery(value);
+    if (value.trim().length < 3) setSuggestions([]);
   }
 
   function runCheck() {
@@ -159,10 +168,7 @@ export default function EligibilityWizard() {
             <input
               type="text"
               value={query}
-              onChange={(e) => {
-                setAddress(null);
-                setQuery(e.target.value);
-              }}
+              onChange={(e) => onAddressInput(e.target.value)}
               placeholder="e.g. 10 Adelaide Street, Queenstown"
               autoComplete="off"
               aria-autocomplete="list"
