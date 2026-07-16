@@ -40,7 +40,12 @@ export default function HomePage() {
                 confirmed by EECA and an approved service provider.
               </p>
             </div>
-            <div className="about-visual" role="img" aria-label="Warm living room interior" />
+            <div className="about-visuals" aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/insulation-detail.png" alt="" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/brand-atmosphere.png" alt="" />
+            </div>
           </div>
         </section>
       </main>
