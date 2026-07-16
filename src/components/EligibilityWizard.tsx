@@ -8,6 +8,7 @@ import type {
   EligibilityResult,
   Occupancy,
 } from "@/lib/types";
+import type { YearBuiltLookup } from "@/lib/yearBuilt";
 
 type Step = "address" | "occupancy" | "built" | "csc" | "checking" | "results";
 
@@ -25,6 +26,9 @@ export default function EligibilityWizard() {
   const [address, setAddress] = useState<AddressSuggestion | null>(null);
   const [occupancy, setOccupancy] = useState<Occupancy | null>(null);
   const [builtBefore2008, setBuiltBefore2008] = useState<boolean | null>(null);
+  const [yearBuilt, setYearBuilt] = useState<YearBuiltLookup | null>(null);
+  const [yearBuiltLoading, setYearBuiltLoading] = useState(false);
+  const [yearBuiltManual, setYearBuiltManual] = useState(false);
   const [hasCsc, setHasCsc] = useState<boolean | null>(null);
   const [consent, setConsent] = useState(false);
   const [result, setResult] = useState<EligibilityResult | null>(null);
@@ -39,6 +43,7 @@ export default function EligibilityWizard() {
   const [isPending, startTransition] = useTransition();
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const yearBuiltReqRef = useRef(0);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -66,17 +71,54 @@ export default function EligibilityWizard() {
     };
   }, [query, address?.label]);
 
+  async function prefetchYearBuilt(label: string) {
+    const reqId = ++yearBuiltReqRef.current;
+    setYearBuiltLoading(true);
+    try {
+      const res = await fetch(`/api/year-built?address=${encodeURIComponent(label)}`);
+      const data = await res.json();
+      if (reqId !== yearBuiltReqRef.current) return;
+      setYearBuilt((data.lookup as YearBuiltLookup) ?? null);
+    } catch {
+      if (reqId !== yearBuiltReqRef.current) return;
+      setYearBuilt(null);
+    } finally {
+      if (reqId === yearBuiltReqRef.current) setYearBuiltLoading(false);
+    }
+  }
+
   function selectAddress(item: AddressSuggestion) {
     setAddress(item);
     setQuery(item.label);
     setSuggestions([]);
+    setYearBuilt(null);
+    setYearBuiltManual(false);
+    setBuiltBefore2008(null);
+    prefetchYearBuilt(item.label);
   }
 
   function onAddressInput(value: string) {
     setAddress(null);
     setQuery(value);
+    setYearBuilt(null);
+    setYearBuiltManual(false);
+    setBuiltBefore2008(null);
     if (value.trim().length < 3) setSuggestions([]);
   }
+
+  function continueFromOccupancy() {
+    if (!occupancy) return;
+    if (occupancy === "owner" && !yearBuiltManual && yearBuilt?.builtBefore2008 != null) {
+      setBuiltBefore2008(yearBuilt.builtBefore2008);
+      setStep("csc");
+      return;
+    }
+    setStep("built");
+  }
+
+  const effectiveBuiltBefore2008 =
+    builtBefore2008 ??
+    (!yearBuiltManual ? (yearBuilt?.builtBefore2008 ?? null) : null);
 
   function runCheck() {
     if (!address || occupancy == null || builtBefore2008 == null || hasCsc == null || !consent) {
@@ -136,11 +178,15 @@ export default function EligibilityWizard() {
   }
 
   function restart() {
+    yearBuiltReqRef.current += 1;
     setStep("address");
     setQuery("");
     setAddress(null);
     setOccupancy(null);
     setBuiltBefore2008(null);
+    setYearBuilt(null);
+    setYearBuiltLoading(false);
+    setYearBuiltManual(false);
     setHasCsc(null);
     setConsent(false);
     setResult(null);
@@ -170,6 +216,7 @@ export default function EligibilityWizard() {
       return;
     }
     if (step === "csc") {
+      setYearBuiltManual(true);
       setStep("built");
       return;
     }
@@ -304,7 +351,7 @@ export default function EligibilityWizard() {
               type="button"
               className="btn primary"
               disabled={!occupancy}
-              onClick={() => setStep("built")}
+              onClick={continueFromOccupancy}
             >
               Continue
             </button>
@@ -316,23 +363,47 @@ export default function EligibilityWizard() {
         <section className="panel">
           <h2>Was your home built before 2008?</h2>
           <p className="lead">Homes built in 2008 or later do not qualify for this grant.</p>
+
+          {yearBuiltLoading && (
+            <div className="lookup-box">
+              <div className="spinner small" aria-hidden="true" />
+              <p>Looking up build decade from property records…</p>
+            </div>
+          )}
+
+          {!yearBuiltLoading && yearBuilt?.summary && (
+            <div className="lookup-box ok">
+              <p className="lookup-title">Found in property records</p>
+              <p>{yearBuilt.summary}</p>
+              {yearBuilt.builtBefore2008 != null && !yearBuiltManual && (
+                <p className="hint">We’ve pre-selected the answer below — change it if it’s wrong.</p>
+              )}
+            </div>
+          )}
+
           <div className="choices">
             <button
               type="button"
-              className={builtBefore2008 === true ? "choice selected" : "choice"}
-              onClick={() => setBuiltBefore2008(true)}
+              className={effectiveBuiltBefore2008 === true ? "choice selected" : "choice"}
+              onClick={() => {
+                setYearBuiltManual(true);
+                setBuiltBefore2008(true);
+              }}
             >
               Yes — built before 2008
             </button>
             <button
               type="button"
-              className={builtBefore2008 === false ? "choice selected" : "choice"}
-              onClick={() => setBuiltBefore2008(false)}
+              className={effectiveBuiltBefore2008 === false ? "choice selected" : "choice"}
+              onClick={() => {
+                setYearBuiltManual(true);
+                setBuiltBefore2008(false);
+              }}
             >
               No — built in 2008 or later
             </button>
           </div>
-          {builtBefore2008 === false && (
+          {effectiveBuiltBefore2008 === false && (
             <div className="alert warn">
               Homes built in 2008 or later are <strong>not eligible</strong>.
             </div>
@@ -341,8 +412,12 @@ export default function EligibilityWizard() {
             <button
               type="button"
               className="btn primary"
-              disabled={builtBefore2008 === null}
-              onClick={() => setStep("csc")}
+              disabled={effectiveBuiltBefore2008 === null}
+              onClick={() => {
+                if (effectiveBuiltBefore2008 == null) return;
+                setBuiltBefore2008(effectiveBuiltBefore2008);
+                setStep("csc");
+              }}
             >
               Continue
             </button>
@@ -357,6 +432,22 @@ export default function EligibilityWizard() {
             A Community Services Card or SuperGold Combo Card qualifies you for the maximum 90%
             funding, regardless of deprivation zone.
           </p>
+          {yearBuilt?.summary && (builtBefore2008 ?? yearBuilt.builtBefore2008) != null && (
+            <div className="lookup-box ok">
+              <p className="lookup-title">Year built</p>
+              <p>{yearBuilt.summary}</p>
+              <button
+                type="button"
+                className="linkish"
+                onClick={() => {
+                  setYearBuiltManual(true);
+                  setStep("built");
+                }}
+              >
+                Change year built
+              </button>
+            </div>
+          )}
           <div className="choices">
             <button
               type="button"
