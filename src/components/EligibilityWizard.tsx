@@ -4,11 +4,19 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import type {
   AddressSuggestion,
+  ClaimScenario,
   EligibilityResult,
   Occupancy,
 } from "@/lib/types";
 
 type Step = "address" | "occupancy" | "built" | "csc" | "checking" | "results";
+
+const CLAIM_SCENARIOS: { value: ClaimScenario; label: string }[] = [
+  { value: "still_cold", label: "The house still feels cold" },
+  { value: "new_owner", label: "I’m a new owner (previous owner may have claimed)" },
+  { value: "incomplete_install", label: "Insulation may be incomplete / a component was missed" },
+  { value: "other", label: "Other" },
+];
 
 export default function EligibilityWizard() {
   const [step, setStep] = useState<Step>("address");
@@ -25,6 +33,8 @@ export default function EligibilityWizard() {
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [yearsSinceClaim, setYearsSinceClaim] = useState("");
+  const [claimScenario, setClaimScenario] = useState<ClaimScenario>("");
   const [submitStatus, setSubmitStatus] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [searching, setSearching] = useState(false);
@@ -111,6 +121,8 @@ export default function EligibilityWizard() {
           contactName,
           contactEmail,
           contactPhone,
+          yearsSinceClaim,
+          claimScenario,
         }),
       });
       const data = await res.json();
@@ -137,8 +149,16 @@ export default function EligibilityWizard() {
     setContactName("");
     setContactEmail("");
     setContactPhone("");
+    setYearsSinceClaim("");
+    setClaimScenario("");
     setSubmitStatus(null);
   }
+
+  const claimFormReady =
+    !result?.eeca.hasExistingClaim ||
+    (Boolean(contactMessage.trim()) &&
+      Boolean(yearsSinceClaim.trim()) &&
+      Boolean(claimScenario));
 
   const stepIndex =
     step === "address"
@@ -347,8 +367,20 @@ export default function EligibilityWizard() {
 
       {step === "results" && result && (
         <section className="panel results">
-          <div className={result.eligible ? "badge ok" : "badge no"}>
-            {result.eligible ? "Likely eligible" : "Not eligible"}
+          <div
+            className={
+              result.eeca.hasExistingClaim
+                ? "badge warn"
+                : result.eligible
+                  ? "badge ok"
+                  : "badge no"
+            }
+          >
+            {result.eeca.hasExistingClaim
+              ? "Existing claim on record"
+              : result.eligible
+                ? "Likely eligible"
+                : "Not eligible"}
           </div>
           <h2>{result.answers.addressLabel}</h2>
 
@@ -374,8 +406,8 @@ export default function EligibilityWizard() {
               <p className="muted">
                 {result.eeca.checked
                   ? result.eeca.hasExistingClaim
-                    ? "An existing insulation or heating application was found for this property."
-                    : "No existing application found on EECA’s system."
+                    ? "EECA’s records show prior insulation work and/or an open application for this address."
+                    : "No prior insulation claim found on EECA’s system for this address."
                   : result.eeca.error
                     ? `EECA check incomplete: ${result.eeca.error}`
                     : "EECA check was skipped for this path."}
@@ -388,16 +420,36 @@ export default function EligibilityWizard() {
           )}
 
           {result.eeca.hasExistingClaim && (
-            <div className="alert info">
-              <strong>Existing claim detected.</strong> Please leave a contact message below so we
-              can follow up about your property.
+            <div className="alert warn claim-alert">
+              <p>
+                <strong>Existing claim detected.</strong>
+              </p>
+              {result.eeca.claimSummary && (
+                <p className="eeca-quote">“{result.eeca.claimSummary}”</p>
+              )}
+              <p>
+                Claims completed in roughly the last 10–15 years are almost always rejected by EECA
+                for a second grant — unless an installer missed a component, or another special
+                circumstance applies. New owners of a previously claimed home usually do not qualify
+                for second funding.
+              </p>
+              <p>
+                Please tell us about your situation below so we can advise whether anything can still
+                be done.
+              </p>
             </div>
           )}
 
           <div className="contact-block">
-            <h3>Send results to our team</h3>
+            <h3>
+              {result.eeca.hasExistingClaim
+                ? "Tell us about your inquiry"
+                : "Send results to our team"}
+            </h3>
             <p className="muted">
-              We’ll email a summary to our team. Add your details if you’d like a follow-up.
+              {result.eeca.hasExistingClaim
+                ? "These details are required so we can review your circumstances and email our team."
+                : "We’ll email a summary to our team. Add your details if you’d like a follow-up."}
             </p>
             <div className="fields-row">
               <label>
@@ -417,9 +469,40 @@ export default function EligibilityWizard() {
                 <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
               </label>
             </div>
+
+            {result.eeca.hasExistingClaim && (
+              <>
+                <label className="field">
+                  How long since the last claim / insulation work?
+                  <input
+                    type="text"
+                    value={yearsSinceClaim}
+                    onChange={(e) => setYearsSinceClaim(e.target.value)}
+                    placeholder="e.g. about 8 years, or 2015, or unsure"
+                    required
+                  />
+                </label>
+                <fieldset className="scenario-set">
+                  <legend>What best describes your situation?</legend>
+                  <div className="choices">
+                    {CLAIM_SCENARIOS.map((s) => (
+                      <button
+                        key={s.value}
+                        type="button"
+                        className={claimScenario === s.value ? "choice selected" : "choice"}
+                        onClick={() => setClaimScenario(s.value)}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              </>
+            )}
+
             <label className="field">
               {result.eeca.hasExistingClaim
-                ? "Contact message (existing claim)"
+                ? "Circumstances (required)"
                 : "Optional message"}
               <textarea
                 rows={4}
@@ -427,7 +510,7 @@ export default function EligibilityWizard() {
                 onChange={(e) => setContactMessage(e.target.value)}
                 placeholder={
                   result.eeca.hasExistingClaim
-                    ? "Tell us about the existing claim or how we can help…"
+                    ? "e.g. The house still feels cold in winter; we bought the home last year and weren’t the ones who claimed…"
                     : "Anything else we should know?"
                 }
                 required={result.eeca.hasExistingClaim}
@@ -440,7 +523,7 @@ export default function EligibilityWizard() {
               <button
                 type="button"
                 className="btn primary"
-                disabled={result.eeca.hasExistingClaim && !contactMessage.trim()}
+                disabled={!claimFormReady}
                 onClick={submitResults}
               >
                 Email results

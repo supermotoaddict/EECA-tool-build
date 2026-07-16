@@ -50,10 +50,12 @@ export default function TermsPage() {
 
       <h2>3. How results are used</h2>
       <p>
-        Results are indicative only. EECA and approved providers make the final decision on grants.
-        An “existing claim” flag means EECA’s system reported a prior insulation or heating request
-        for the address; it does not automatically mean you cannot get help — please leave a contact
-        message so we can assist.
+      Results are indicative only. EECA and approved providers make the final decision on grants.
+      An “existing claim” flag means EECA’s system reported prior ceiling and underfloor insulation
+      at the address (the same signal shown as “our records show your house already has ceiling and
+      underfloor insulation”) and/or an open insulation or heating application. Claims from roughly
+      the last 10–15 years are usually declined for second funding; please leave circumstances and
+      how long since the last claim so we can advise.
       </p>
 
       <h2>4. Accuracy</h2>

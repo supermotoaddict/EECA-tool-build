@@ -12,6 +12,10 @@ const bodySchema = z.object({
   contactName: z.string().optional(),
   contactEmail: z.string().optional(),
   contactPhone: z.string().optional(),
+  yearsSinceClaim: z.string().optional(),
+  claimScenario: z
+    .enum(["still_cold", "new_owner", "incomplete_install", "other", ""])
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -23,6 +27,28 @@ export async function POST(request: Request) {
     }
 
     const payload = parsed.data;
+
+    if (payload.result.eeca.hasExistingClaim) {
+      if (!payload.contactMessage?.trim()) {
+        return NextResponse.json(
+          { error: "Please describe the circumstances around your inquiry." },
+          { status: 400 }
+        );
+      }
+      if (!payload.yearsSinceClaim?.trim()) {
+        return NextResponse.json(
+          { error: "Please tell us how long it has been since the last claim." },
+          { status: 400 }
+        );
+      }
+      if (!payload.claimScenario) {
+        return NextResponse.json(
+          { error: "Please select the scenario that best matches your situation." },
+          { status: 400 }
+        );
+      }
+    }
+
     const email = await sendNotificationEmail(payload);
     const saved = saveSubmission(payload, email.status);
 

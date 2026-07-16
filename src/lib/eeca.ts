@@ -4,6 +4,9 @@ import type { EecaResult } from "./types";
 const EECA_URL =
   "https://www.eeca.govt.nz/co-funding-and-support/products/warmer-kiwi-homes-programme/check-eligibility/?bypassIntro=1";
 
+const EECA_INSULATION_ON_RECORD =
+  "However, our records show your house already has ceiling and underfloor insulation.";
+
 let browserPromise: Promise<Browser> | null = null;
 
 async function getBrowser(): Promise<Browser> {
@@ -16,12 +19,37 @@ async function getBrowser(): Promise<Browser> {
   return browserPromise;
 }
 
+function buildClaimSummary(flags: {
+  hasInsulation: boolean;
+  hasHeating: boolean;
+  hasInsulationRequest: boolean;
+  hasHeatingRequest: boolean;
+}): string | null {
+  const parts: string[] = [];
+
+  if (flags.hasInsulation) {
+    parts.push(EECA_INSULATION_ON_RECORD);
+  }
+  if (flags.hasInsulationRequest || flags.hasHeatingRequest) {
+    parts.push(
+      "EECA also shows an existing insulation or heating application already in their system for this property."
+    );
+  }
+  if (flags.hasHeating && !flags.hasInsulation) {
+    parts.push("EECA records indicate prior heating work at this address.");
+  }
+
+  return parts.length ? parts.join(" ") : null;
+}
+
 /**
  * Checks EECA’s Warmer Kiwi Homes qualify API for an AddressRight address id.
  * Uses a headless browser to obtain a reCAPTCHA v3 token from EECA’s public page,
  * then calls /api/tools/wkh/qualify (same path the official tool uses).
  *
- * Critical flags: hasInsulationRequest / hasHeatingRequest → existing claim.
+ * Existing claim signals (as shown on EECA’s tool):
+ * - hasInsulation === true → “records show your house already has ceiling and underfloor insulation”
+ * - hasInsulationRequest / hasHeatingRequest → open application already on file
  */
 export async function checkEecaEligibility(addressId: string): Promise<EecaResult> {
   const empty: EecaResult = {
@@ -33,6 +61,7 @@ export async function checkEecaEligibility(addressId: string): Promise<EecaResul
     hasHeating: false,
     addressInsulationValid: null,
     addressHeatingValid: null,
+    claimSummary: null,
   };
 
   let context = null;
@@ -101,18 +130,30 @@ export async function checkEecaEligibility(addressId: string): Promise<EecaResul
 
     const hasInsulationRequest = Boolean(data.hasInsulationRequest);
     const hasHeatingRequest = Boolean(data.hasHeatingRequest);
+    const hasInsulation = Boolean(data.hasInsulation);
+    const hasHeating = Boolean(data.hasHeating);
+
+    // Prior insulation on EECA’s records is the common “existing claim” signal homeowners see.
+    const hasExistingClaim =
+      hasInsulation || hasInsulationRequest || hasHeatingRequest;
 
     return {
       checked: true,
-      hasExistingClaim: hasInsulationRequest || hasHeatingRequest,
+      hasExistingClaim,
       hasInsulationRequest,
       hasHeatingRequest,
-      hasInsulation: Boolean(data.hasInsulation),
-      hasHeating: Boolean(data.hasHeating),
+      hasInsulation,
+      hasHeating,
       addressInsulationValid:
         data.addressInsulationValid == null ? null : Boolean(data.addressInsulationValid),
       addressHeatingValid:
         data.addressHeatingValid == null ? null : Boolean(data.addressHeatingValid),
+      claimSummary: buildClaimSummary({
+        hasInsulation,
+        hasHeating,
+        hasInsulationRequest,
+        hasHeatingRequest,
+      }),
       raw: data,
     };
   } catch (err) {

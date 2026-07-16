@@ -6,13 +6,21 @@ import type { SubmissionPayload } from "./types";
 const NOTIFY_TO = process.env.NOTIFY_EMAIL ?? "insulator.dan@gmail.com";
 const OUTBOX_DIR = path.join(process.cwd(), "data", "outbox");
 
+const SCENARIO_LABELS: Record<string, string> = {
+  still_cold: "House still feels cold / insulation may be incomplete",
+  new_owner: "New owner — previous owner may have claimed",
+  incomplete_install: "Installer may have missed a component",
+  other: "Other",
+};
+
 function buildEmailContent(payload: SubmissionPayload): { subject: string; text: string; html: string } {
   const { result } = payload;
   const funding =
     result.fundingPercent != null ? `${result.fundingPercent}%` : "N/A";
-  const claim = result.eeca.hasExistingClaim ? "YES — existing claim on file" : "No";
+  const claim = result.eeca.hasExistingClaim ? "YES — existing claim / insulation on record" : "No";
+  const claimTag = result.eeca.hasExistingClaim ? "EXISTING CLAIM" : result.eligible ? "ELIGIBLE" : "NOT ELIGIBLE";
 
-  const subject = `WKH eligibility: ${result.eligible ? "ELIGIBLE" : "NOT ELIGIBLE"} — ${result.answers.addressLabel}`;
+  const subject = `WKH eligibility: ${claimTag} — ${result.answers.addressLabel}`;
 
   const lines = [
     "Warmer Kiwi Homes — Eligibility check result",
@@ -26,7 +34,7 @@ function buildEmailContent(payload: SubmissionPayload): { subject: string; text:
     `Built before 2008: ${result.answers.builtBefore2008 ? "Yes" : "No"}`,
     `Community Services Card: ${result.answers.hasCommunityServicesCard ? "Yes" : "No"}`,
     "",
-    `Eligible: ${result.eligible ? "Yes" : "No"}`,
+    `Eligible (rules check): ${result.eligible ? "Yes" : "No"}`,
     `Government funding discount: ${funding}`,
     `Funding reason: ${result.fundingReason}`,
     result.ineligibleReason ? `Ineligible reason: ${result.ineligibleReason}` : "",
@@ -35,17 +43,27 @@ function buildEmailContent(payload: SubmissionPayload): { subject: string; text:
     `SA1 code: ${result.nzDep?.sa1Code ?? "unknown"}`,
     `SA2 name: ${result.nzDep?.sa2Name ?? "unknown"}`,
     "",
-    `Existing EECA claim: ${claim}`,
-    `  Insulation request: ${result.eeca.hasInsulationRequest}`,
-    `  Heating request: ${result.eeca.hasHeatingRequest}`,
+    `Existing EECA claim / prior insulation: ${claim}`,
+    `  hasInsulation (ceiling & underfloor on record): ${result.eeca.hasInsulation}`,
+    `  hasHeating on record: ${result.eeca.hasHeating}`,
+    `  Insulation request open: ${result.eeca.hasInsulationRequest}`,
+    `  Heating request open: ${result.eeca.hasHeatingRequest}`,
+    result.eeca.claimSummary ? `  EECA message: ${result.eeca.claimSummary}` : "",
     `  EECA check completed: ${result.eeca.checked}`,
     result.eeca.error ? `  EECA error: ${result.eeca.error}` : "",
+    "",
+    `Years / time since last claim: ${payload.yearsSinceClaim || "—"}`,
+    `Claim scenario: ${
+      payload.claimScenario
+        ? SCENARIO_LABELS[payload.claimScenario] || payload.claimScenario
+        : "—"
+    }`,
     "",
     `Contact name: ${payload.contactName || "—"}`,
     `Contact email: ${payload.contactEmail || "—"}`,
     `Contact phone: ${payload.contactPhone || "—"}`,
     "",
-    "Contact / existing-claim message:",
+    "Circumstances / contact message:",
     payload.contactMessage || "(none)",
   ]
     .filter((l) => l !== "")

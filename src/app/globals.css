@@ -432,6 +432,37 @@ a {
   color: var(--no);
 }
 
+.badge.warn {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.claim-alert p {
+  margin: 0 0 0.65rem;
+}
+
+.claim-alert p:last-child {
+  margin-bottom: 0;
+}
+
+.eeca-quote {
+  font-style: italic;
+  border-left: 3px solid rgba(154, 52, 18, 0.45);
+  padding-left: 0.75rem;
+}
+
+.scenario-set {
+  border: 0;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.scenario-set legend {
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 0.55rem;
+}
+
 .result-grid {
   display: grid;
   gap: 1rem;
