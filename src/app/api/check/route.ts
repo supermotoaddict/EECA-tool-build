@@ -43,6 +43,7 @@ export async function POST(request: Request) {
           hasHeating: false,
           addressInsulationValid: null,
           addressHeatingValid: null,
+          claimSummary: null,
         },
       });
       return NextResponse.json({ result });
