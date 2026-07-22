@@ -27,28 +27,28 @@ export default function HomePage() {
         </section>
 
         <section className="about" aria-label="About the grant">
-          <div className="about-grid">
-            <div>
-              <h2>Warm, dry homes for New Zealand families</h2>
-              <p>
-                Warmer Kiwi Homes can cover a large share of approved ceiling and underfloor
-                insulation. Funding depends on whether you hold a Community Services Card, or live in
-                a higher deprivation area (NZDep zones 5–10).
-              </p>
-              <p>
-                This tool is an independent helper for homeowners. Final eligibility is always
-                confirmed by EECA and an approved service provider.
-              </p>
-            </div>
-            <div className="about-visuals" aria-hidden="true">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/insulation-detail.png" alt="" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/brand-atmosphere.png" alt="" />
-            </div>
+          <div className="about-copy">
+            <h2>Warm, dry homes for New Zealand families</h2>
+            <p>
+              Warmer Kiwi Homes can cover a large share of approved ceiling and underfloor
+              insulation. Funding depends on whether you hold a Community Services Card, or live in
+              a higher deprivation area (NZDep zones 5–10).
+            </p>
+            <p>
+              This tool is an independent helper for homeowners. Final eligibility is always
+              confirmed by EECA and an approved service provider.
+            </p>
           </div>
         </section>
       </main>
+
+      <section className="bottom-visual" aria-label="Insulation installation">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/insulation-detail.png"
+          alt="Installer fitting ceiling insulation"
+        />
+      </section>
 
       <footer className="site-footer">
         <p>
