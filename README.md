@@ -1,3 +1,25 @@
+# Premier Solutions tools
+
+This repo contains two Premier Solutions tools:
+
+1. **Warmer Kiwi Homes eligibility checker** (`/`) — homeowner grant screening
+2. **Premier Field** (`/field`) — iPhone-installable map for insulation BDMs: record streets driven, drop site pins, notes, and photos
+
+## Premier Field (site map PWA)
+
+Open `/field` on your iPhone (Safari), then **Share → Add to Home Screen**.
+
+| Feature | What it does |
+| --- | --- |
+| Track route | GPS breadcrumb while the app is open; green lines = streets already driven |
+| Log site | Pin a construction site with status, contact, notes, follow-up date, photos |
+| Sites list | Searchable visit database stored on the phone (IndexedDB) |
+| Backup | Export / import JSON from Help |
+
+**iPhone note:** Safari/PWAs only get reliable GPS while the Field screen is open (screen can stay awake via Wake Lock). For always-on background “fog of streets” maps, use [Fog of World](https://apps.apple.com/app/fog-of-world/id505367096) alongside Premier Field as your site CRM.
+
+---
+
 # Warmer Kiwi Homes Eligibility Checker
 
 A Next.js web app that walks New Zealand homeowners through a Warmer Kiwi Homes eligibility check:
