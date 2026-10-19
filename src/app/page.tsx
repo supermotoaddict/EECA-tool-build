@@ -50,6 +50,8 @@ export default function HomePage() {
           Not affiliated with EECA.{" "}
           <Link href="/terms">Terms &amp; privacy</Link>
           {" · "}
+          <Link href="/field">Premier Field (site map)</Link>
+          {" · "}
           <a
             href="https://www.eeca.govt.nz/co-funding-and-support/products/warmer-kiwi-homes-programme/"
             target="_blank"
